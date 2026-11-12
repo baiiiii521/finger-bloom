@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>指尖生花 · BLOOM AT YOUR FINGERTIPS</title>
+<meta name="description" content="对着摄像头握拳成苞、张手绽放——一朵听你手势的粒子花。"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --ink:#f3ede4; --ink-dim:rgba(243,237,228,.55); --ink-faint:rgba(243,237,228,.34);
+    --rose:#ff8fb8; --gold:#ffd97a; --hair:rgba(243,237,228,.16);
+    --serif:"Marcellus","Songti SC","STSong",serif;
+    --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#060509;overflow:hidden}
+  body{font-family:var(--sans);color:var(--ink)}
+  #gl,#skel{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #skel{pointer-events:none}
+  #glow{position:fixed;left:50%;top:46%;width:120vmin;height:120vmin;transform:translate(-50%,-50%);
+    border-radius:50%;pointer-events:none;filter:blur(10px);opacity:.55;transition:background 1.2s ease;
+    background:radial-gradient(closest-side,rgba(255,143,184,.20),rgba(255,143,184,.05) 55%,transparent 72%)}
+  #vig{position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 42%,transparent 55%,rgba(0,0,0,.55) 100%)}
+  #grain{position:fixed;inset:0;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E")}
+
+  .frame{position:fixed;z-index:10}
+  /* title */
+  #brand{top:calc(18px + env(safe-area-inset-top));left:22px;pointer-events:none}
+  #brand .cn{font-size:19px;font-weight:600;letter-spacing:.34em}
+  #brand .en{margin-top:5px;font-family:var(--serif);font-size:10px;letter-spacing:.42em;color:var(--ink-dim)}
+  #brand .rule{margin-top:10px;width:44px;height:1px;background:linear-gradient(90deg,var(--rose),transparent)}
+  /* camera badge */
+  #camBadge{top:calc(20px + env(safe-area-inset-top));right:22px;display:flex;align-items:center;gap:9px;
+    padding:8px 13px;border:1px solid var(--hair);border-radius:999px;background:rgba(10,8,16,.38);backdrop-filter:blur(10px)}
+  #camBadge .dot{width:7px;height:7px;border-radius:50%;background:#5c5648;transition:background .4s}
+  #camBadge.live .dot{background:#ff5470;box-shadow:0 0 10px #ff5470;animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.45}}
+  #camBadge .t{font-family:var(--serif);font-size:10px;letter-spacing:.3em;color:var(--ink-dim)}
+  #camBadge .t b{color:var(--ink);font-weight:400}
+  /* gesture panel */
+  #panel{left:22px;bottom:calc(20px + env(safe-area-inset-bottom));width:264px;padding:16px 18px 14px;
+    border:1px solid var(--hair);border-radius:16px;background:linear-gradient(160deg,rgba(20,16,30,.55),rgba(10,8,16,.42));
+    backdrop-filter:blur(14px);box-shadow:0 24px 50px -20px rgba(0,0,0,.7)}
+  #panel .lab{display:flex;justify-content:space-between;align-items:center;
+    font-family:var(--serif);font-size:9.5px;letter-spacing:.34em;color:var(--ink-dim)}
+  #panel .lab .cn{font-family:var(--sans);letter-spacing:.3em;font-size:10px}
+  #stateRow{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+  #stateDot{width:9px;height:9px;border-radius:50%;background:#8b8496;flex:none;transform:translateY(-1px);transition:background .5s,box-shadow .5s}
+  #stateEn{font-family:var(--serif);font-size:19px;letter-spacing:.07em;line-height:1;white-space:nowrap}
+  #stateCn{font-size:12px;color:var(--ink-dim);letter-spacing:.2em;white-space:nowrap}
+  #pctRow{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+  #pct{font-family:var(--serif);font-size:44px;line-height:.95;font-variant-numeric:tabular-nums}
+  #pctSign{font-family:var(--serif);font-size:16px;color:var(--ink-dim)}
+  #pctNote{margin-left:auto;font-size:10px;letter-spacing:.18em;color:var(--ink-faint);text-align:right;line-height:1.7}
+  #barWrap{margin-top:11px;height:2px;background:rgba(243,237,228,.12);border-radius:2px;overflow:hidden}
+  #bar{height:100%;width:0%;border-radius:2px;background:linear-gradient(90deg,var(--gold),var(--rose));
+    transition:width .18s ease-out}
+  #dotsRow{display:flex;gap:16px;margin-top:11px}
+  .sdot{display:flex;align-items:center;gap:6px;font-size:9.5px;letter-spacing:.22em;color:var(--ink-faint);transition:color .4s}
+  .sdot i{width:5px;height:5px;border-radius:50%;background:currentColor;display:block}
+  .sdot.on{color:var(--ink)}
+  /* buttons */
+  #btns{right:22px;bottom:calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
+  .rbtn{width:46px;height:46px;border-radius:50%;border:1px solid var(--hair);cursor:pointer;color:var(--ink);
+    background:rgba(10,8,16,.42);backdrop-filter:blur(10px);font-size:18px;display:flex;align-items:center;justify-content:center;
+    transition:transform .15s ease,border-color .3s}
+  .rbtn:active{transform:scale(.92)}
+  .rbtn.off{color:var(--ink-faint)}
+  .rbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  /* touch slider */
+  #touchCtl{left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom));z-index:11;
+    display:none;align-items:center;gap:12px;padding:10px 16px;border:1px solid var(--hair);border-radius:999px;
+    background:rgba(10,8,16,.45);backdrop-filter:blur(12px)}
+  #touchCtl.show{display:flex}
+  #touchCtl span{font-size:10px;letter-spacing:.24em;color:var(--ink-dim);white-space:nowrap}
+  #touchCtl input[type=range]{width:min(38vw,210px);accent-color:var(--rose);height:22px}
+  /* toast */
+  #toast{top:calc(74px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-8px);z-index:30;
+    padding:9px 18px;border-radius:999px;border:1px solid var(--hair);background:rgba(12,10,20,.72);backdrop-filter:blur(10px);
+    font-size:12.5px;letter-spacing:.06em;opacity:0;pointer-events:none;transition:opacity .4s,transform .4s;white-space:nowrap}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  /* start overlay */
+  #cover{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;background:radial-gradient(90% 70% at 50% 45%,rgba(6,5,9,.18),rgba(6,5,9,.66));
+    backdrop-filter:blur(2.5px);transition:opacity .8s ease}
+  #cover.hide{opacity:0;pointer-events:none}
+  #cover .over{font-family:var(--serif);font-size:10.5px;letter-spacing:.5em;color:var(--ink-dim)}
+  #cover h1{margin-top:16px;font-size:clamp(38px,8vw,58px);font-weight:600;letter-spacing:.3em;text-indent:.3em}
+  #cover .en{margin-top:10px;font-family:var(--serif);font-size:clamp(10px,2.4vw,13px);letter-spacing:.52em;text-indent:.52em;color:var(--rose)}
+  #cover .rule{margin:26px auto 0;width:64px;height:1px;background:linear-gradient(90deg,transparent,var(--ink-dim),transparent)}
+  #cover .desc{margin-top:22px;font-size:13.5px;line-height:2.05;color:var(--ink-dim);letter-spacing:.08em}
+  #cover .desc b{color:var(--ink);font-weight:600}
+  #startBtn{margin-top:32px;font:inherit;cursor:pointer;color:#17101f;border:none;border-radius:999px;
+    padding:15px 40px;font-size:15px;font-weight:700;letter-spacing:.22em;text-indent:.1em;
+    background:linear-gradient(120deg,#ffd97a,#ff8fb8);box-shadow:0 18px 40px -12px rgba(255,143,184,.55);
+    transition:transform .2s ease,box-shadow .2s}
+  #startBtn:active{transform:scale(.97)}
+  #startBtn[disabled]{opacity:.65;cursor:wait}
+  #touchBtn{margin-top:16px;font:inherit;cursor:pointer;background:none;border:none;color:var(--ink-dim);
+    font-size:12.5px;letter-spacing:.26em;padding:8px 12px;border-bottom:1px solid var(--hair)}
+  #cover .note{margin-top:30px;font-size:11px;color:var(--ink-faint);letter-spacing:.14em;line-height:1.9}
+  #fpsTag{position:fixed;left:22px;top:calc(20px + env(safe-area-inset-top));z-index:9;display:none}
+  @media (max-width:640px){
+    #brand{left:16px}#brand .cn{font-size:16px}
+    #camBadge{right:16px;padding:7px 11px}
+    #panel{left:16px;bottom:calc(86px + env(safe-area-inset-bottom));width:206px;padding:13px 15px 11px}
+    #stateEn{font-size:17px}#pct{font-size:34px}
+    #stateCn{display:none}
+    #btns{right:16px;bottom:calc(86px + env(safe-area-inset-bottom))}
+    #touchCtl{bottom:calc(18px + env(safe-area-inset-bottom))}
+    #cover .desc{font-size:12.5px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition-duration:.01s !important;animation-duration:.01s !important}}
+</style>
+</head>
+<body>
+<div id="glow"></div>
+<canvas id="gl"></canvas>
+<canvas id="skel"></canvas>
+<div id="vig"></div><div id="grain"></div>
+<video id="cam" playsinline muted autoplay style="display:none"></video>
+
+<div class="frame" id="brand">
+  <div class="cn">指尖生花</div>
+  <div class="en">BLOOM AT YOUR FINGERTIPS</div>
+  <div class="rule"></div>
+</div>
+
+<div class="frame" id="camBadge"><span class="dot"></span><span class="t">CAMERA <b id="camState">OFF</b> · NO. 01</span></div>
+
+<div class="frame" id="panel">
+  <div class="lab"><span>GESTURE</span><span class="cn">手 势</span></div>
+  <div id="stateRow"><span id="stateDot"></span><span id="stateEn">WAITING</span><span id="stateCn">等待手掌</span></div>
+  <div id="pctRow"><span id="pct">0</span><span id="pctSign">%</span><span id="pctNote">OPENNESS<br/>绽放程度</span></div>
+  <div id="barWrap"><div id="bar"></div></div>
+  <div id="dotsRow">
+    <span class="sdot" id="dBud"><i></i>花苞 BUD</span>
+    <span class="sdot" id="dBloom"><i></i>绽放 BLOOM</span>
+    <span class="sdot" id="dWait"><i></i>等待 WAIT</span>
+  </div>
+</div>
+
+<div class="frame" id="btns">
+  <button class="rbtn" id="camBtn" title="摄像头开关" aria-label="摄像头开关">
+    <svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>
+  </button>
+  <button class="rbtn" id="fsBtn" title="全屏" aria-label="全屏">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+  </button>
+</div>
+
+<div class="frame" id="touchCtl"><span>闭合</span><input type="range" id="oeRange" min="0" max="100" value="0"/><span>绽放</span></div>
+
+<div class="frame" id="toast"></div>
+
+<div id="cover">
+  <div class="over">手 势 粒 子 花</div>
+  <h1>指尖生花</h1>
+  <div class="en">BLOOM AT YOUR FINGERTIPS</div>
+  <div class="rule"></div>
+  <p class="desc"><b>握拳</b>，粒子聚成金色花苞 · <b>张开手</b>，花瓣在指尖绽放<br/>手离开画面，花会安静地缩回成一颗粉色星球</p>
+  <button id="startBtn">开启摄像头</button>
+  <button id="touchBtn">先用触控体验 →</button>
+  <p class="note">摄像头画面只在你本机处理，不上传、不保存<br/>CAMERA FEED IS PROCESSED LOCALLY ONLY</p>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const REDUCED=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MOBILE=matchMedia("(max-width: 640px)").matches||"ontouchstart" in window;
+
+/* ================= particle flower ================= */
+const gl=$("#gl"), gx=gl.getContext("2d");
+const skel=$("#skel"), sx=skel.getContext("2d");
+let W=0,H=0,DPR=1,S=300,CX=0,CY=0;
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2);
+  W=innerWidth; H=innerHeight;
+  for(const c of [gl,skel]){ c.width=W*DPR; c.height=H*DPR; }
+  gx.setTransform(DPR,0,0,DPR,0,0); sx.setTransform(DPR,0,0,DPR,0,0);
+  S=Math.min(W,H)*(MOBILE?0.40:0.36);
+  CX=W/2; CY=H*(MOBILE?0.44:0.47);
+}
+addEventListener("resize",resize);
+
+/* palettes: 16 buckets x [bloom, bud, ball] RGB */
+function hx(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+const BUCKETS=[];
+{ // outer petals 0-5 pink shades
+  const bloom=["#ff7daf","#ff94bd","#ffb3cd","#ff6f9f","#ffc2d6","#ff8fb8"];
+  const bud=["#f5a623","#f7b733","#ffc94d","#eda017","#ffd97a","#f9c34d"];
+  const ball=["#ff9ec2","#ff8fb8","#ffb3cd","#ff7daf","#ffaecb","#ff94bd"];
+  for(let i=0;i<6;i++) BUCKETS.push([hx(bloom[i]),hx(bud[i]),hx(ball[i])]);
+  // inner petals 6-8 light pink
+  const b2=["#ffd3e4","#ffe0ec","#ffc7da"], u2=["#ffd97a","#ffe9a8","#ffdf8e"], a2=["#ffc7da","#ffd3e4","#ffb3cd"];
+  for(let i=0;i<3;i++) BUCKETS.push([hx(b2[i]),hx(u2[i]),hx(a2[i])]);
+  // center 9-11 gold-white
+  const b3=["#ffedb5","#ffd94d","#ffe9a8"], u3=["#ffe9a8","#ffd94d","#fff3c4"], a3=["#ffd9e8","#ffe3f1","#ffd9e8"];
+  for(let i=0;i<3;i++) BUCKETS.push([hx(b3[i]),hx(u3[i]),hx(a3[i])]);
+  // halo 12-15 pastel
+  const b4=["#cfd8ff","#ffe3f1","#fff0b3","#ffe9f4"], u4=["#f7b733","#ffd97a","#f5a623","#ffe9a8"], a4=["#ff9ec2","#cfd8ff","#ffe3f1","#ffb3cd"];
+  for(let i=0;i<4;i++) BUCKETS.push([hx(b4[i]),hx(u4[i]),hx(a4[i])]);
+}
+const spriteCache=new Map();
+function spriteFor(rgb){
+  const key=(rgb[0]<<16)|(rgb[1]<<8)|rgb[2];
+  let cv=spriteCache.get(key);
+  if(cv) return cv;
+  cv=document.createElement("canvas"); cv.width=cv.height=48;
+  const c=cv.getContext("2d");
+  const g=c.createRadialGradient(24,24,0,24,24,24);
+  const [r,gg,b]=rgb;
+  const lr=Math.round(r+(255-r)*.38), lg=Math.round(gg+(255-gg)*.38), lb=Math.round(b+(255-b)*.38);
+  g.addColorStop(0,`rgba(${lr},${lg},${lb},.95)`);
+  g.addColorStop(.30,`rgba(${r},${gg},${b},.62)`);
+  g.addColorStop(.65,`rgba(${r},${gg},${b},.20)`);
+  g.addColorStop(1,`rgba(${r},${gg},${b},0)`);
+  c.fillStyle=g; c.fillRect(0,0,48,48);
+  if(spriteCache.size>260) spriteCache.clear();
+  spriteCache.set(key,cv);
+  return cv;
+}
+
+/* particle construction (unit space, radius ~1) */
+const N = REDUCED?900:(MOBILE?2500:3800);
+const parts=[];
+function rnd(a=1,b){ return b===undefined? Math.random()*a : a+Math.random()*(b-a); }
+function fibDir(i,n){ const y=1-(i/(n-1))*2, r=Math.sqrt(Math.max(0,1-y*y)), t=i*2.39996; return [Math.cos(t)*r,y,Math.sin(t)*r]; }
+function buildParticles(){
+  parts.length=0;
+  const roles=[];
+  for(let i=0;i<N;i++){
+    const f=i/N;
+    roles.push(f<0.44?0 : f<0.66?1 : f<0.82?2 : 3); // 0 outer petal, 1 inner petal, 2 center, 3 halo
+  }
+  for(let i=0;i<N;i++){
+    const role=roles[i];
+    let bloom;
+    if(role===0||role===1){
+      const petals=role===0?9:6, L=role===0?1.0:0.60;
+      const pa=(i%petals)/petals*Math.PI*2 + (role===1?Math.PI/petals:0) + rnd(-.05,.05);
+      const u=Math.pow(Math.random(),0.8), v=rnd(-1,1);
+      const wdt=Math.pow(Math.sin(Math.PI*Math.min(u*1.12,1)),0.75);
+      const along=u*L, across=v*wdt*L*0.36;
+      const z=Math.sin(u*Math.PI)*0.17*L - u*u*0.10*L + (role===1?0.13:0) + rnd(-.025,.025);
+      const ca=Math.cos(pa), sa=Math.sin(pa);
+      bloom=[along*ca-across*sa, along*sa+across*ca, z];
+    } else if(role===2){
+      const r=0.17*Math.sqrt(Math.random()), th=rnd(Math.PI*2);
+      const stamen=r>0.115;
+      bloom=[Math.cos(th)*r, Math.sin(th)*r, 0.11*(1-(r/0.17)**2)+(stamen?0.055:0)+rnd(-.012,.012)];
+    } else {
+      const th=rnd(Math.PI*2), rr=rnd(1.12,1.5);
+      bloom=[Math.cos(th)*rr, Math.sin(th)*rr, rnd(-.07,.07)];
+    }
+    // bud: golden teardrop
+    const bd=fibDir((i*7)%N,N);
+    const taper=1-Math.max(0,bd[1])*0.30;
+    const bud=[bd[0]*0.30*taper, bd[1]*0.36+0.02, bd[2]*0.30*taper];
+    // ball: pink sphere
+    const bl=fibDir(i,N), bt=0.56*rnd(0.90,1.07);
+    const ball=[bl[0]*bt, bl[1]*bt, bl[2]*bt];
+    parts.push({
+      role, bucket: role===0?(i%6) : role===1?6+(i%3) : role===2?9+(i%3) : 12+(i%4),
+      bloom, bud, ball,
+      x:ball[0], y:ball[1], z:ball[2], vx:0, vy:0, vz:0,
+      size: role===3? rnd(1.1,2.0) : role===2? rnd(1.6,2.6) : rnd(1.7,3.0),
+      phase: rnd(Math.PI*2), tw: rnd(.6,1.6),
+    });
+  }
+}
+buildParticles();
+let activeN=N;
+
+/* morph state */
+let pres=0, oe=0;                 // smoothed
+let presT=0, oeT=0;                // targets
+let mode="demo";                   // demo | cam | touch
+let demoT0=performance.now();
+
+const glowEl=$("#glow"), stateEn=$("#stateEn"), stateCn=$("#stateCn"), stateDot=$("#stateDot"),
+      pctEl=$("#pct"), barEl=$("#bar"), camBadge=$("#camBadge"), camStateEl=$("#camState");
+const dots={bud:$("#dBud"),bloom:$("#dBloom"),wait:$("#dWait")};
+let lastUiState="";
+function smoothstep(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
+
+function frameWeights(){
+  const oeS=smoothstep(oe);
+  return { ball:1-pres, bud:pres*(1-oeS), bloom:pres*oeS, oeS };
+}
+let rot=0, lastFrame=performance.now(), fpsEMA=16, slowFrames=0, sMul=1;
+function render(now){
+  requestAnimationFrame(render);
+  const dt=Math.min(50, now-lastFrame); lastFrame=now;
+  fpsEMA=fpsEMA*0.95+dt*0.05;
+  if(fpsEMA>23 && activeN>1300){ if(++slowFrames>90){ activeN=Math.floor(activeN*0.82); slowFrames=0; } } else slowFrames=0;
+
+  /* drive targets by mode */
+  if(mode==="demo"){
+    const t=((now-demoT0)/1000)%14;
+    if(t<3){ presT=0; oeT=0; }                       // ball
+    else if(t<6){ presT=1; oeT=(t-3)/3; }            // bloom up
+    else if(t<9){ presT=1; oeT=1; }                  // full bloom
+    else if(t<12){ presT=1; oeT=1-(t-9)/3; }         // close to bud
+    else { presT=0; oeT=0; }                         // release to ball
+  }
+  pres+=(presT-pres)*0.045;
+  oe+=(oeT-oe)*0.10;
+  const w=frameWeights();
+  rot+=dt*0.00006; // slow in-plane spin
+  const sway=Math.sin(now*0.00013)*0.38;
+  const cz=Math.cos(rot), sz2=Math.sin(rot), cy2=Math.cos(sway), sy2=Math.sin(sway);
+  sMul+=((mode==="demo"?1.3:1)-sMul)*0.03;
+  const Seff=S*sMul;
+  const bobY=Math.sin(now*0.0009)*Seff*0.016;
+  const bucketRGB=BUCKETS.map(bk=>[
+    Math.round(bk[0][0]*w.bloom+bk[1][0]*w.bud+bk[2][0]*w.ball),
+    Math.round(bk[0][1]*w.bloom+bk[1][1]*w.bud+bk[2][1]*w.ball),
+    Math.round(bk[0][2]*w.bloom+bk[1][2]*w.bud+bk[2][2]*w.ball)]);
+  const sprites=bucketRGB.map(spriteFor);
+
+  gx.globalCompositeOperation="source-over";
+  gx.fillStyle="rgba(6,5,9,0.30)";
+  gx.fillRect(0,0,W,H);
+  gx.globalCompositeOperation="lighter";
+  const tS=now*0.001;
+  for(let i=0;i<activeN;i++){
+    const p=parts[i];
+    let tx=p.ball[0]*w.ball + (p.bud[0]*w.bud + p.bloom[0]*w.bloom);
+    let ty=p.ball[1]*w.ball + (p.bud[1]*w.bud + p.bloom[1]*w.bloom);
+    let tz=p.ball[2]*w.ball + (p.bud[2]*w.bud + p.bloom[2]*w.bloom);
+    if(p.role===3){ // halo slow orbit in bloom
+      const a=tS*0.12*p.tw + p.phase;
+      const ox=Math.cos(a)*0.02*w.bloom, oz=Math.sin(a)*0.02*w.bloom;
+      tx+=ox; tz+=oz;
+    }
+    // rotate in-plane (Z) then a gentle Y sway — the flower always faces you
+    const x1=tx*cz - ty*sz2, y1=tx*sz2 + ty*cz;
+    const rx=x1*cy2 - tz*sy2, rz=x1*sy2 + tz*cy2;
+    ty=y1;
+    // spring in unit space toward rotated target
+    p.vx+=(rx-p.x)*0.052; p.vy+=(ty-p.y)*0.052; p.vz+=(rz-p.z)*0.052;
+    p.vx*=0.80; p.vy*=0.80; p.vz*=0.80;
+    p.x+=p.vx; p.y+=p.vy; p.z+=p.vz;
+    const jx=Math.sin(tS*1.3*p.tw+p.phase)*0.006, jy=Math.cos(tS*1.1*p.tw+p.phase*1.7)*0.006;
+    const px=CX+(p.x+jx)*Seff, py=CY+(p.y+jy)*Seff+bobY;
+    const depth=clamp((p.z+1.1)/2.2,0,1);
+    const sz=p.size*(0.55+depth*0.85)*(Seff/300)*1.75;
+    gx.globalAlpha=(0.15+depth*0.30)*(p.role===2?0.55 : p.role===3?0.5 : 0.9);
+    const spr=sprites[p.bucket];
+    gx.drawImage(spr, px-sz, py-sz, sz*2, sz*2);
+  }
+  gx.globalAlpha=1;
+  gx.globalCompositeOperation="source-over";
+  drawSkeleton();
+  updatePanel(w);
+}
+
+/* ================= UI panel ================= */
+function updatePanel(w){
+  let st, en, cn, dotC, pct;
+  if(pres<0.45){ st="wait"; en="WAITING"; cn="等待手掌"; dotC="#8b8496"; pct=Math.round(oe*100); }
+  else if(oe<0.30){ st="bud"; en="CLOSED · FIST"; cn="握拳 · 花苞"; dotC="#ffd97a"; pct=Math.round(oe*100); }
+  else { st="bloom"; en="BLOOM OPEN"; cn="张开手 · 绽放"; dotC="#ff8fb8"; pct=Math.round(oe*100); }
+  if(st!==lastUiState){
+    lastUiState=st;
+    stateEn.textContent=en; stateCn.textContent=cn;
+    stateDot.style.background=dotC; stateDot.style.boxShadow=`0 0 12px ${dotC}`;
+    dots.bud.classList.toggle("on",st==="bud");
+    dots.bloom.classList.toggle("on",st==="bloom");
+    dots.wait.classList.toggle("on",st==="wait");
+    glowEl.style.background = st==="bud"
+      ? "radial-gradient(closest-side,rgba(255,190,80,.24),rgba(255,170,60,.06) 55%,transparent 72%)"
+      : st==="bloom"
+      ? "radial-gradient(closest-side,rgba(255,143,184,.22),rgba(255,143,184,.05) 55%,transparent 72%)"
+      : "radial-gradient(closest-side,rgba(190,160,255,.16),rgba(160,140,255,.04) 55%,transparent 72%)";
+  }
+  pctEl.textContent=pct;
+  barEl.style.width=(pres<0.45?0:pct)+"%";
+}
+
+/* ================= hand skeleton ================= */
+const CONN=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+let skelPts=null, videoW=640, videoH=480;
+function drawSkeleton(){
+  sx.clearRect(0,0,W,H);
+  if(!skelPts) return;
+  const sc=Math.max(W/videoW,H/videoH), ox=(W-videoW*sc)/2, oy=(H-videoH*sc)/2;
+  const P=skelPts.map(p=>[W-((p.x*videoW)*sc+ox), (p.y*videoH)*sc+oy]); // mirrored
+  sx.strokeStyle="rgba(255,255,255,.72)"; sx.lineWidth=1.4; sx.lineJoin="round"; sx.lineCap="round";
+  sx.beginPath();
+  for(const [a,b] of CONN){ sx.moveTo(P[a][0],P[a][1]); sx.lineTo(P[b][0],P[b][1]); }
+  sx.stroke();
+  sx.fillStyle="rgba(255,255,255,.9)";
+  for(let i=0;i<21;i++){ const r=[4,8,12,16,20].includes(i)?3:2; sx.beginPath(); sx.arc(P[i][0],P[i][1],r,0,6.3); sx.fill(); }
+  sx.fillStyle="rgba(255,143,184,.95)";
+  for(const i of [4,8,12,16,20]){ sx.beginPath(); sx.arc(P[i][0],P[i][1],3.4,0,6.3); sx.fill(); }
+}
+
+/* ================= camera + MediaPipe ================= */
+const video=$("#cam");
+let hands=null, camStream=null, lastHandT=0, lastSend=0, camOn=false;
+function toast(msg,ms=3400){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),ms);
+}
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z||0); }
+function onResults(res){
+  const lm=res.multiHandLandmarks && res.multiHandLandmarks[0];
+  if(lm){
+    lastHandT=performance.now();
+    skelPts=lm;
+    const palm=dist(lm[0],lm[9])||0.001;
+    const mean=[4,8,12,16,20].reduce((s,i)=>s+dist(lm[i],lm[0]),0)/5;
+    oeT=clamp((mean/palm-1.02)/(2.02-1.02),0,1);
+    presT=1;
+  } else {
+    skelPts=null;
+    if(performance.now()-lastHandT>450) presT=0;
+  }
+}
+async function pumpFrames(){
+  if(!camOn) return;
+  if(video.readyState>=2 && performance.now()-lastSend>34){
+    lastSend=performance.now();
+    try{ await hands.send({image:video}); }catch(e){}
+  }
+  requestAnimationFrame(pumpFrames);
+}
+async function startCamera(){
+  const btn=$("#startBtn");
+  btn.disabled=true; btn.textContent="正在开启…";
+  try{
+    if(typeof Hands==="undefined") throw new Error("hands-lib");
+    hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+    hands.setOptions({maxNumHands:1, modelComplexity:MOBILE?0:1, minDetectionConfidence:0.6, minTrackingConfidence:0.5});
+    hands.onResults(onResults);
+    camStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"user", width:{ideal:MOBILE?720:1280}, height:{ideal:MOBILE?960:720}}, audio:false});
+    video.srcObject=camStream;
+    await video.play();
+    videoW=video.videoWidth||640; videoH=video.videoHeight||480;
+    camOn=true; mode="cam"; lastHandT=performance.now();
+    camBadge.classList.add("live"); camStateEl.textContent="LIVE";
+    $("#cover").classList.add("hide");
+    pumpFrames();
+    toast("摄像头已开启 · 对着镜头握拳或张开手");
+  }catch(e){
+    btn.disabled=false; btn.textContent="开启摄像头";
+    enterTouch("摄像头没能开启（"+(e.name==="NotAllowedError"?"权限被拒绝":"设备或组件异常")+"），已切换触控模式");
+  }
+}
+function stopCamera(){
+  camOn=false; skelPts=null; presT=0;
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  camBadge.classList.remove("live"); camStateEl.textContent="OFF";
+}
+function enterTouch(reason){
+  mode="touch"; presT=1; oeT=parseFloat($("#oeRange").value)/100;
+  $("#cover").classList.add("hide");
+  $("#touchCtl").classList.add("show");
+  if(reason) toast(reason,4200);
+}
+$("#startBtn").addEventListener("click",startCamera);
+$("#touchBtn").addEventListener("click",()=>enterTouch("触控模式 · 拖动滑杆控制花开"));
+$("#oeRange").addEventListener("input",e=>{ if(mode==="touch") oeT=parseFloat(e.target.value)/100; });
+$("#camBtn").addEventListener("click",()=>{
+  if(camOn){ stopCamera(); toast("摄像头已关闭"); }
+  else if(mode==="cam"||mode==="demo"){ $("#cover").classList.remove("hide"); }
+  else { enterTouch(); $("#cover").classList.remove("hide"); }
+});
+$("#fsBtn").addEventListener("click",()=>{
+  if(document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(()=>{});
+});
+/* vertical drag also drives openness in touch mode */
+let dragY=null;
+gl.addEventListener("pointerdown",e=>{ if(mode==="touch") dragY={y:e.clientY, oe:oeT}; });
+gl.addEventListener("pointermove",e=>{ if(dragY&&mode==="touch"){ oeT=clamp(dragY.oe+(dragY.y-e.clientY)/260,0,1); $("#oeRange").value=Math.round(oeT*100); } });
+addEventListener("pointerup",()=>dragY=null);
+
+/* debug hooks for screenshots: ?s=ball|bud|bloom */
+const q=new URLSearchParams(location.search);
+if(q.get("s")){
+  $("#cover").style.display="none"; mode="static";
+  const v=q.get("s");
+  if(v==="ball"){ pres=presT=0; oe=oeT=0; }
+  if(v==="bud"){ pres=presT=1; oe=oeT=0.06; }
+  if(v==="bloom"){ pres=presT=1; oe=oeT=0.92; }
+  lastUiState=""; 
+}
+resize();
+gx.fillStyle="#060509"; gx.fillRect(0,0,W,H);
+requestAnimationFrame(render);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" async onerror="window.__handsFailed=1"></script>
+</body>
+</html>
